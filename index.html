@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>気象庁天気APIサンプル(改善版)</title>
+<title>しらす庁天気</title>
 <style>
   body {
     font-family: "Arial", sans-serif;
@@ -101,22 +101,22 @@
 
   <script>
     document.getElementById('fetchBtn').addEventListener('click', function() {
-      const prefectureCode = document.getElementById('prefectureSelect').value;
-      const url = `https://www.jma.go.jp/bosai/forecast/data/forecast/${prefectureCode}.json`;
+      let prefectureCode = document.getElementById('prefectureSelect').value;
+      let url = `https://www.jma.go.jp/bosai/forecast/data/forecast/${prefectureCode}.json`;
 
       fetch(url)
         .then(response => response.json())
         .then(data => {
-          const resultDiv = document.getElementById('result');
+          let resultDiv = document.getElementById('result');
           resultDiv.innerHTML = ""; // 初期化
 
-          const timeSeries = data[0]?.timeSeries || [];
+          let timeSeries = data[0]?.timeSeries || [];
           let weatherData = {};
           
           timeSeries.forEach(series => {
-            const { timeDefines, areas } = series;
+            let { timeDefines, areas } = series;
             areas.forEach(area => {
-              const areaName = area.area.name;
+              let areaName = area.area.name;
               // 選択地域のareaに合わせて処理（基本的に東京や埼玉の場合、対象となる"area"は１つのはず）
               // 今回は最初のareas[0] を利用
               
@@ -141,28 +141,28 @@
 
           // weatherDataは key=日付, value={weather, temp, pop} となる想定
           // これをカードスタイルで表示する
-          for (const time in weatherData) {
-            const card = document.createElement('div');
+          for (let time in weatherData) {
+            let card = document.createElement('div');
             card.className = "card";
 
-            const dateElem = document.createElement('div');
+            let dateElem = document.createElement('div');
             dateElem.className = "date";
             // 日付を可読化（YYYY-MM-DD形式を「MM/DD」のような形で）
-            const dateObj = new Date(weatherData[time].date);
-            const month = dateObj.getMonth() + 1;
-            const day = dateObj.getDate();
+            let dateObj = new Date(weatherData[time].date);
+            let month = dateObj.getMonth() + 1;
+            let day = dateObj.getDate();
             dateElem.textContent = `${month}月${day}日`;
 
-            const weatherElem = document.createElement('div');
+            let weatherElem = document.createElement('div');
             weatherElem.className = "weather-icon";
             // シンプルな表示として、weatherをテキストで表示（本来はアイコンマッピングなども可能）
             weatherElem.textContent = weatherData[time].weather || "不明";
 
-            const tempElem = document.createElement('div');
+            let tempElem = document.createElement('div');
             tempElem.className = "temp";
             tempElem.textContent = `気温: ${weatherData[time].temp ?? "N/A"}℃`;
 
-            const popElem = document.createElement('div');
+            let popElem = document.createElement('div');
             popElem.className = "pop";
             popElem.textContent = `降水確率: ${weatherData[time].pop ?? "N/A"}`;
 
