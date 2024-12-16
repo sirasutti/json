@@ -1,189 +1,80 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>しらす庁天気</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>天気取得サンプル</title>
 <style>
   body {
-    font-family: "Arial", sans-serif;
+    font-family: sans-serif;
     margin: 20px;
-    background: #f0f0f0;
   }
-
-  h1 {
-    margin-bottom: 20px;
-    text-align: center;
-  }
-
-  .controls {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-  }
-
-  #prefectureSelect {
-    padding: 5px;
-    font-size: 16px;
+  select, button {
     margin-right: 10px;
   }
-
-  #fetchBtn {
-    padding: 5px 10px;
-    font-size: 16px;
-    cursor: pointer;
-    background: #0078d4;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
+  table {
+    border-collapse: collapse;
+    margin-top: 20px;
   }
-  #fetchBtn:hover {
-    background: #005fa3;
-  }
-
-  #result {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
-  }
-
-  .card {
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
-    padding: 20px;
-    width: 220px;
-    text-align: center;
-  }
-
-  .card h2 {
-    margin-top: 0;
-    font-size: 18px;
-    margin-bottom: 10px;
-    color: #333;
-  }
-
-  .date {
-    font-weight: bold;
-    margin-bottom: 10px;
-  }
-
-  .weather-icon {
-    font-size: 36px;
-    margin-bottom: 10px;
-  }
-
-  .temp, .pop {
-    font-size: 14px;
-    margin-bottom: 5px;
-  }
-
-  .error {
-    text-align: center;
-    color: red;
-    font-weight: bold;
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
   }
 </style>
 </head>
 <body>
-  <h1>気象庁天気APIから天気取得</h1>
+<h1>気象庁天気APIテスト（3日分）</h1>
+<p>地域を選択して「取得」ボタンを押すと、3日分の天気を表示します。</p>
+<select id="prefSelect">
+  <option value="130000">東京</option>
+  <option value="110000">埼玉</option>
+</select>
+<button id="fetchBtn">取得</button>
+
+<div id="result"></div>
+
+<script>
+document.getElementById('fetchBtn').addEventListener('click', async () => {
+  const areaCode = document.getElementById('prefSelect').value;
+  const url = `https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`;
   
-  <div class="controls">
-    <select id="prefectureSelect">
-      <option value="130000">東京</option>
-      <option value="110000">埼玉</option>
-    </select>
-    <button id="fetchBtn">取得</button>
-  </div>
+  try {
+    const response = await fetch(url);
+    if(!response.ok) {
+      throw new Error('データ取得に失敗しました');
+    }
+    const data = await response.json();
+    
+    // dataは配列で戻る場合が多い（先頭要素を参照）
+    const forecastData = data[0];
 
-  <div id="result"></div>
+    // timeSeriesの中から日付、天気情報が格納された部分を取得
+    // timeSeriesは複数あり、1つ目が天気コード、2つ目が降水確率、3つ目が気温など
+    // 今回は簡易的に天気概況（weatherCodes）から天気を表示
+    const times = forecastData.timeSeries[0].timeDefines;
+    const weathers = forecastData.timeSeries[0].areas[0].weathers; // weather文言
+    // 最初の3日分のみ使用（0,1,2）
+    const targetCount = Math.min(3, times.length);
 
-  <script>
-    document.getElementById('fetchBtn').addEventListener('click', function() {
-      let prefectureCode = document.getElementById('prefectureSelect').value;
-      let url = `https://www.jma.go.jp/bosai/forecast/data/forecast/${prefectureCode}.json`;
-
-      fetch(url)
-        .then(response => response.json())
-        .then(data => {
-          let resultDiv = document.getElementById('result');
-          resultDiv.innerHTML = ""; // 初期化
-
-          let timeSeries = data[0]?.timeSeries || [];
-          let weatherData = {};
-          
-          timeSeries.forEach(series => {
-            let { timeDefines, areas } = series;
-            areas.forEach(area => {
-              let areaName = area.area.name;
-              // 選択地域のareaに合わせて処理（基本的に東京や埼玉の場合、対象となる"area"は１つのはず）
-              // 今回は最初のareas[0] を利用
-              
-              // weathers, temps, pops, etcがあればweatherDataに格納
-              timeDefines.forEach((time, index) => {
-                if(!weatherData[time]) {
-                  weatherData[time] = {};
-                  weatherData[time].date = time;
-                }
-                if(area.weathers) {
-                  weatherData[time].weather = area.weathers[index];
-                }
-                if(area.temps) {
-                  weatherData[time].temp = area.temps[index];
-                }
-                if(area.pops) {
-                  weatherData[time].pop = area.pops[index] !== undefined ? area.pops[index]+"%" : "N/A";
-                }
-              });
-            });
-          });
-
-          // weatherDataは key=日付, value={weather, temp, pop} となる想定
-          // これをカードスタイルで表示する
-          for (let time in weatherData) {
-            let card = document.createElement('div');
-            card.className = "card";
-
-            let dateElem = document.createElement('div');
-            dateElem.className = "date";
-            // 日付を可読化（YYYY-MM-DD形式を「MM/DD」のような形で）
-            let dateObj = new Date(weatherData[time].date);
-            let month = dateObj.getMonth() + 1;
-            let day = dateObj.getDate();
-            dateElem.textContent = `${month}月${day}日`;
-
-            let weatherElem = document.createElement('div');
-            weatherElem.className = "weather-icon";
-            // シンプルな表示として、weatherをテキストで表示（本来はアイコンマッピングなども可能）
-            weatherElem.textContent = weatherData[time].weather || "不明";
-
-            let tempElem = document.createElement('div');
-            tempElem.className = "temp";
-            tempElem.textContent = `気温: ${weatherData[time].temp ?? "N/A"}℃`;
-
-            let popElem = document.createElement('div');
-            popElem.className = "pop";
-            popElem.textContent = `降水確率: ${weatherData[time].pop ?? "N/A"}`;
-
-            card.appendChild(dateElem);
-            card.appendChild(weatherElem);
-            card.appendChild(tempElem);
-            card.appendChild(popElem);
-
-            resultDiv.appendChild(card);
-          }
-
-          if(Object.keys(weatherData).length === 0) {
-            // データがない場合
-            resultDiv.innerHTML = "<div class='error'>データが取得できませんでした。</div>";
-          }
-        })
-        .catch(error => {
-          console.error('エラーが発生しました:', error);
-          document.getElementById('result').innerHTML = '<div class="error">データ取得に失敗しました。</div>';
-        });
-    });
-  </script>
+    // 結果表示用HTML構築
+    let html = `<h2>${forecastData.publishingOffice}発表 (${forecastData.reportDatetime})</h2>`;
+    html += '<table>';
+    html += '<tr><th>日付</th><th>天気</th></tr>';
+    for (let i = 0; i < targetCount; i++) {
+      const dateStr = new Date(times[i]).toLocaleString('ja-JP', {
+        year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short'
+      });
+      html += `<tr><td>${dateStr}</td><td>${weathers[i]}</td></tr>`;
+    }
+    html += '</table>';
+    
+    document.getElementById('result').innerHTML = html;
+    
+  } catch (error) {
+    console.error(error);
+    document.getElementById('result').textContent = '天気情報の取得に失敗しました。';
+  }
+});
+</script>
 </body>
 </html>
